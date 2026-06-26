@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>English Jeopardy Show</title>
+  <style>
+    :root{
+      --bg:#06122b;
+      --panel:#0b1f4d;
+      --panel2:#123072;
+      --gold:#ffd166;
+      --cyan:#57d7ff;
+      --white:#f8fbff;
+      --muted:#a9b9da;
+      --red:#ff4d6d;
+      --green:#52ffa8;
+      --disabled:#29344f;
+      --shadow:0 18px 50px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--white);
+      background:
+        radial-gradient(circle at top left, rgba(87,215,255,.22), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(255,77,109,.15), transparent 32%),
+        linear-gradient(135deg, #020716, var(--bg));
+    }
+    .app{width:min(1180px, 96vw); margin:0 auto; padding:22px 0 34px;}
+    header{display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:18px;}
+    .title h1{margin:0; font-size:clamp(28px,5vw,54px); letter-spacing:.04em; color:var(--gold); text-shadow:0 0 18px rgba(255,209,102,.45);}
+    .title p{margin:4px 0 0; color:var(--muted); font-size:15px;}
+    .controls{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    button{
+      border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer;
+      color:#06122b; background:var(--gold); box-shadow:0 8px 20px rgba(0,0,0,.25);
+    }
+    button.secondary{background:var(--cyan);}
+    button.danger{background:var(--red); color:white;}
+    button:disabled{opacity:.45; cursor:not-allowed;}
+    .scoreboard{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 18px;}
+    .team{background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:12px; box-shadow:var(--shadow);}
+    .team label{display:block; color:var(--muted); font-size:12px; margin-bottom:6px;}
+    .team input{width:100%; border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:8px; color:white; background:rgba(0,0,0,.25); font-weight:700;}
+    .score-row{display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px;}
+    .score{font-size:28px; font-weight:900; color:var(--gold);}
+    .score-buttons{display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;}
+    .score-buttons button{padding:6px 8px; font-size:12px; border-radius:9px; box-shadow:none;}
+    .board{display:grid; grid-template-columns:repeat(5,1fr); gap:10px;}
+    .cat{background:linear-gradient(180deg,var(--panel2),var(--panel)); min-height:76px; border-radius:14px; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; font-size:clamp(14px,2vw,20px); font-weight:900; color:var(--gold); border:1px solid rgba(255,255,255,.14); box-shadow:var(--shadow);}
+    .cell{min-height:86px; border-radius:14px; background:linear-gradient(180deg,#133681,#091d4d); display:flex; align-items:center; justify-content:center; color:var(--gold); font-weight:1000; font-size:clamp(24px,4vw,42px); border:1px solid rgba(255,255,255,.14); transition:.18s transform, .18s filter;}
+    .cell:hover{transform:translateY(-3px); filter:brightness(1.12)}
+    .cell.used{background:var(--disabled); color:#77839e; transform:none; filter:none; cursor:not-allowed;}
+    dialog{width:min(820px,94vw); border:0; border-radius:24px; padding:0; background:linear-gradient(160deg,#071940,#0f2d70); color:white; box-shadow:0 26px 90px rgba(0,0,0,.65);}
+    dialog::backdrop{background:rgba(0,0,0,.72); backdrop-filter:blur(4px);}
+    .modal{padding:24px; min-height:430px; display:flex; flex-direction:column; justify-content:space-between; gap:18px;}
+    .modal-top{display:flex; justify-content:space-between; gap:12px; align-items:center; color:var(--muted); font-weight:800;}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px; background:rgba(255,255,255,.11); color:var(--cyan);}
+    .question{font-size:clamp(32px,7vw,74px); line-height:1.18; text-align:center; font-weight:950; margin:22px 0; white-space:pre-wrap;}
+    .question.small{font-size:clamp(24px,4vw,44px);}
+    .answer{display:none; text-align:center; font-size:clamp(28px,5vw,52px); color:var(--green); font-weight:950; margin:12px 0; white-space:pre-wrap;}
+    .answer.show{display:block; animation:pop .25s ease-out;}
+    @keyframes pop{from{transform:scale(.92); opacity:0}to{transform:scale(1); opacity:1}}
+    .modal-actions{display:flex; justify-content:center; gap:10px; flex-wrap:wrap;}
+    .daily{display:none; text-align:center; padding:18px; border-radius:18px; background:linear-gradient(135deg, rgba(255,209,102,.24), rgba(255,77,109,.20)); border:1px solid rgba(255,209,102,.45);}
+    .daily.show{display:block; animation:flash .7s ease-in-out 2;}
+    @keyframes flash{50%{filter:brightness(1.5)}}
+    .daily h2{font-size:clamp(34px,6vw,70px); margin:0; color:var(--gold);}
+    .final-panel{margin-top:18px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:18px; padding:16px; display:none;}
+    .final-panel.show{display:block;}
+    .final-question{font-size:clamp(28px,5vw,54px); font-weight:950; text-align:center; margin:18px 0;}
+    .edit-help{font-size:13px; color:var(--muted); line-height:1.6; margin-top:14px;}
+    @media (max-width:760px){
+      .scoreboard{grid-template-columns:repeat(2,1fr)}
+      .board{gap:6px}
+      .cat{font-size:12px; min-height:60px; padding:6px}
+      .cell{font-size:22px; min-height:64px; border-radius:10px}
+      .app{width:98vw; padding-top:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <h1>ENGLISH JEOPARDY</h1>
+        <p>카테고리와 점수를 골라 문제를 푸세요. 푼 문제는 자동으로 닫힙니다.</p>
+      </div>
+      <div class="controls">
+        <button type="button" id="finalBtn" class="secondary">🏆 Final Jeopardy</button>
+        <button type="button" id="resetBtn" class="danger">Reset</button>
+      </div>
+    </header>
+
+    <section class="scoreboard" aria-label="Team scoreboard">
+      <div class="team"><label>Team 1</label><input value="Team A"><div class="score-row"><span class="score" data-score="0">0</span><div class="score-buttons"><button data-team="0" data-delta="100">+100</button><button data-team="0" data-delta="-100">-100</button></div></div></div>
+      <div class="team"><label>Team 2</label><input value="Team B"><div class="score-row"><span class="score" data-score="0">0</span><div class="score-buttons"><button data-team="1" data-delta="100">+100</button><button data-team="1" data-delta="-100">-100</button></div></div></div>
+      <div class="team"><label>Team 3</label><input value="Team C"><div class="score-row"><span class="score" data-score="0">0</span><div class="score-buttons"><button data-team="2" data-delta="100">+100</button><button data-team="2" data-delta="-100">-100</button></div></div></div>
+      <div class="team"><label>Team 4</label><input value="Team D"><div class="score-row"><span class="score" data-score="0">0</span><div class="score-buttons"><button data-team="3" data-delta="100">+100</button><button data-team="3" data-delta="-100">-100</button></div></div></div>
+    </section>
+
+    <main id="board" class="board" aria-label="Jeopardy board"></main>
+
+    <section id="finalPanel" class="final-panel">
+      <div class="badge">🏆 Final Jeopardy</div>
+      <p class="edit-help">각 팀은 답을 쓰기 전에 베팅 점수를 정하세요. 정답 공개 후 칠판 또는 점수판에 반영하면 됩니다.</p>
+      <div id="finalQuestion" class="final-question"></div>
+      <div id="finalAnswer" class="answer"></div>
+      <div class="modal-actions"><button type="button" id="showFinalAnswer">정답 보기</button></div>
+    </section>
+  </div>
+
+  <dialog id="questionDialog">
+    <div class="modal">
+      <div>
+        <div class="modal-top">
+          <span id="modalCategory" class="badge"></span>
+          <span id="modalPoints" class="badge"></span>
+        </div>
+        <div id="dailyDouble" class="daily"><h2>💰 DAILY DOUBLE!</h2><p>원하는 점수를 베팅하세요.</p></div>
+        <div id="questionText" class="question"></div>
+        <div id="answerText" class="answer"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="showAnswerBtn">정답 보기</button>
+        <button type="button" id="closeBtn" class="secondary">보드로 돌아가기</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    /* =========================================================
+       여기를 수정하면 문제를 바꿀 수 있습니다.
+       category: 카테고리 이름
+       questions: 100점부터 500점까지 문제 5개
+       dailyDouble: true를 넣으면 그 문제가 Daily Double로 나옵니다.
+       ========================================================= */
+    const GAME_DATA = [
+      {
+        category: "🎬 Movies",
+        questions: [
+          { points: 100, question: "🦁👑", answer: "The Lion King" },
+          { points: 200, question: "🚢💎❄️", answer: "Titanic" },
+          { points: 300, question: "🧙‍♂️⚡👓", answer: "Harry Potter" },
+          { points: 400, question: "🦖🏝️🚁", answer: "Jurassic Park" },
+          { points: 500, question: "🤖❤️🌱🚀", answer: "WALL·E" }
+        ]
+      },
+      {
+        category: "🌍 Countries",
+        questions: [
+          { points: 100, question: "🍕🍝\nWhich country?", answer: "Italy" },
+          { points: 200, question: "🍁🏒\nWhich country?", answer: "Canada" },
+          { points: 300, question: "🦘🏄‍♂️\nWhich country?", answer: "Australia" },
+          { points: 400, question: "🌮🌵\nWhich country?", answer: "Mexico", dailyDouble: true },
+          { points: 500, question: "🗼🥐🎨\nWhich country?", answer: "France" }
+        ]
+      },
+      {
+        category: "😀 Emoji Mix",
+        questions: [
+          { points: 100, question: "🩺💉\nJob?", answer: "Doctor" },
+          { points: 200, question: "🚒🔥\nJob?", answer: "Firefighter" },
+          { points: 300, question: "🌧️🐱🐶\nIdiom?", answer: "It's raining cats and dogs." },
+          { points: 400, question: "🐱👅\nIdiom?", answer: "Cat got your tongue?" },
+          { points: 500, question: "👂➡️👂\nIdiom?", answer: "In one ear and out the other." }
+        ]
+      },
+      {
+        category: "🤖 AI & Internet",
+        questions: [
+          { points: 100, question: "What does AI stand for?", answer: "Artificial Intelligence" },
+          { points: 200, question: "What app is famous for short videos?", answer: "TikTok" },
+          { points: 300, question: "A false story online is often called ____ news.", answer: "fake news" },
+          { points: 400, question: "A person who makes videos online is called a ____.", answer: "content creator / YouTuber" },
+          { points: 500, question: "What do we call instructions given to AI?", answer: "Prompt", dailyDouble: true }
+        ]
+      },
+      {
+        category: "🎵 Pop Culture",
+        questions: [
+          { points: 100, question: "❄️👸\nSong/Movie?", answer: "Let It Go / Frozen" },
+          { points: 200, question: "Who sings 'Dynamite'?", answer: "BTS" },
+          { points: 300, question: "Complete the title:\nShape of ____", answer: "You" },
+          { points: 400, question: "Which movie has the line,\n'May the Force be with you'?", answer: "Star Wars" },
+          { points: 500, question: "Which singer is known for 'Anti-Hero'?", answer: "Taylor Swift" }
+        ]
+      }
+    ];
+
+    const FINAL_JEOPARDY = {
+      question: "👦⚡👓\nThis story began as a book series and became a famous movie series.",
+      answer: "Harry Potter"
+    };
+
+    const board = document.getElementById('board');
+    const dialog = document.getElementById('questionDialog');
+    const modalCategory = document.getElementById('modalCategory');
+    const modalPoints = document.getElementById('modalPoints');
+    const questionText = document.getElementById('questionText');
+    const answerText = document.getElementById('answerText');
+    const dailyDouble = document.getElementById('dailyDouble');
+    const showAnswerBtn = document.getElementById('showAnswerBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const finalBtn = document.getElementById('finalBtn');
+    const finalPanel = document.getElementById('finalPanel');
+    const finalQuestion = document.getElementById('finalQuestion');
+    const finalAnswer = document.getElementById('finalAnswer');
+    const showFinalAnswer = document.getElementById('showFinalAnswer');
+
+    let used = new Set();
+    let currentKey = null;
+    let scores = [0,0,0,0];
+
+    function renderBoard(){
+      board.innerHTML = '';
+      GAME_DATA.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'cat';
+        div.textContent = cat.category;
+        board.appendChild(div);
+      });
+      for(let row=0; row<5; row++){
+        GAME_DATA.forEach((cat, col) => {
+          const q = cat.questions[row];
+          const key = `${col}-${row}`;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cell' + (used.has(key) ? ' used' : '');
+          btn.textContent = used.has(key) ? '✓' : q.points;
+          btn.disabled = used.has(key);
+          btn.addEventListener('click', () => openQuestion(cat.category, q, key));
+          board.appendChild(btn);
+        });
+      }
+    }
+
+    function openQuestion(category, q, key){
+      currentKey = key;
+      modalCategory.textContent = category;
+      modalPoints.textContent = `${q.points} points`;
+      questionText.textContent = q.question;
+      questionText.className = q.question.length > 45 ? 'question small' : 'question';
+      answerText.textContent = q.answer;
+      answerText.classList.remove('show');
+      dailyDouble.classList.toggle('show', !!q.dailyDouble);
+      showAnswerBtn.disabled = false;
+      dialog.showModal();
+    }
+
+    showAnswerBtn.addEventListener('click', () => {
+      answerText.classList.add('show');
+      showAnswerBtn.disabled = true;
+    });
+
+    closeBtn.addEventListener('click', () => {
+      if(currentKey){ used.add(currentKey); }
+      dialog.close();
+      renderBoard();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if(confirm('게임을 처음부터 다시 시작할까요?')){
+        used = new Set();
+        scores = [0,0,0,0];
+        updateScores();
+        finalPanel.classList.remove('show');
+        finalAnswer.classList.remove('show');
+        renderBoard();
+      }
+    });
+
+    document.querySelectorAll('[data-team]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.team);
+        const delta = Number(btn.dataset.delta);
+        scores[i] += delta;
+        updateScores();
+      });
+    });
+
+    function updateScores(){
+      document.querySelectorAll('.score').forEach((span, i) => {
+        span.textContent = scores[i];
+      });
+    }
+
+    finalBtn.addEventListener('click', () => {
+      finalQuestion.textContent = FINAL_JEOPARDY.question;
+      finalAnswer.textContent = FINAL_JEOPARDY.answer;
+      finalAnswer.classList.remove('show');
+      finalPanel.classList.add('show');
+      finalPanel.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+
+    showFinalAnswer.addEventListener('click', () => {
+      finalAnswer.classList.add('show');
+    });
+
+    renderBoard();
+  </script>
+</body>
+</html>
